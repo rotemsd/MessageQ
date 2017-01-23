@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "634348904127",
+    "firebase_url": "https://messageq-213ca.firebaseio.com",
+    "project_id": "messageq-213ca",
+    "storage_bucket": "messageq-213ca.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:634348904127:android:0aae4b6167a38326",
+        "android_client_info": {
+          "package_name": "com.saado.rotem.messageq"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "634348904127-568fdm09j1gduopqvpjvgeh9fk2taje2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALxXG1m1zuv6hjqRkR1FDd1Bdhg8Jd-ts"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
