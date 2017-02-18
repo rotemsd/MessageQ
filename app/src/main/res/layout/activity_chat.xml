@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_chat"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.saado.rotem.messageq.ChatActivity">
+
+
+    <ListView
+        android:id="@+id/chatListView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/viewDivider">
+
+    </ListView>
+
+    <View
+        android:id="@+id/viewDivider"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_above="@+id/senderContainer"
+        android:layout_gravity="bottom"
+        android:background="#000" />
+
+    <RelativeLayout
+        android:id="@+id/senderContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:padding="5dp">
+
+        <EditText
+            android:id="@+id/etMessageText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_toStartOf="@+id/sendMessageBtn"
+            android:gravity="top"
+            android:hint="Type your message"
+            android:textColor="#555555"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/sendMessageBtn"
+            android:layout_width="72dp"
+            android:layout_height="40dp"
+            android:onClick="sendMessage"
+            android:layout_alignParentEnd="true"
+            android:text="Send"
+            android:textColor="#FFFFFF" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/sendMessageBtn"
+            android:orientation="horizontal"
+            android:id="@+id/timeConditionSection"
+            android:visibility="gone"
+            android:layout_centerHorizontal="true">
+
+            <TimePicker
+                android:timePickerMode="spinner"
+                android:id="@+id/timePicker"
+                android:layout_gravity="center"
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content">
+            </TimePicker>
+
+            <ImageButton
+                android:layout_width="40dp"
+                android:onClick="timeConditionCanceled"
+                android:layout_height="40dp"
+                android:layout_marginLeft="40dp"
+                android:scaleType="fitCenter"
+                android:layout_gravity="center_vertical"
+                android:background="@android:color/transparent"
+                android:src="@drawable/ic_close"/>
+
+        </LinearLayout>
+    </RelativeLayout>
+
+</RelativeLayout>
