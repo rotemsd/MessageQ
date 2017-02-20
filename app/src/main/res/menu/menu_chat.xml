@@ -5,18 +5,22 @@
     tools:context=".ChatActivity">
 
     <item
-        android:id="@+id/action_attach"
+        android:id="@+id/locationCondition"
+        android:title="@string/add_location_condition"
         android:orderInCategory="100"
-        android:title="Attach"
-        app:showAsAction="always">
-        <menu>
-            <item
-                android:id="@+id/locationCondition"
-                android:title="@string/add_location_condition" />
-            <item
-                android:id="@+id/timeCondition"
-                android:title="@string/add_time_condition" />
-        </menu>
-    </item>
+        app:showAsAction="always"
+        android:icon="@drawable/ic_map_marker"/>
+    <item
+        android:id="@+id/timeCondition"
+        android:title="@string/add_time_condition"
+        android:orderInCategory="101"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_clock_alert"/>
+
+    <item
+        android:id="@+id/action_about"
+        android:orderInCategory="102"
+        android:title="@string/about"
+        app:showAsAction="never" />
 
 </menu>

@@ -18,7 +18,7 @@ public class SingleMessage {
     private long timeToShow;
 
     // members for showing on specific place
-    private boolean isPlaced;
+    private boolean isLocation;
     private double latitude, longitude;
 
     //Firebase ref
@@ -38,12 +38,21 @@ public class SingleMessage {
         this.isTimed = false;
         this.timeToShow = 0;
         this.isChildAdded = false;
+        this.isLocation = false;
+        this.latitude = this.longitude = -1;
     }
 
     public void setTimeCondition(long timeCondition)
     {
         this.isTimed = true;
         this.timeToShow = timeCondition;
+    }
+
+    public void setLocationCondition(double longitude, double latitude)
+    {
+        this.isLocation = true;
+        this.longitude = longitude;
+        this.latitude = latitude;
     }
 
     // getters
@@ -73,6 +82,18 @@ public class SingleMessage {
 
     public long getTimeToShow() {
         return timeToShow;
+    }
+
+    public boolean getIsLocation() {
+        return isLocation;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
     }
 
     public void setIsChildAdded(boolean isChildAdded)

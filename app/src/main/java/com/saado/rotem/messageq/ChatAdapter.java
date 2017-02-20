@@ -51,7 +51,7 @@ public class ChatAdapter extends ArrayAdapter<SingleMessage> {
         SingleMessage singleMessage = getItem(position);
         if (singleMessage.getIsSender())
         {
-            if (singleMessage.getIsTimed())
+            if (singleMessage.getIsTimed() || singleMessage.getIsLocation())
                 holder.messageSender.setTextColor(Color.RED);
             holder.messageSender.setVisibility(View.VISIBLE);
             holder.messageRecipient.setVisibility(View.GONE);
@@ -59,10 +59,7 @@ public class ChatAdapter extends ArrayAdapter<SingleMessage> {
         } else {
 
             holder.messageSender.setVisibility(View.GONE);
-            Log.d("rotem", "" + singleMessage.getIsTimed());
-            Log.d("rotem", "" + new Date().getTime());
-            Log.d("rotem", "" + singleMessage.getTimeToShow());
-            if (singleMessage.getIsTimed()) {
+            if (singleMessage.getIsTimed() || singleMessage.getIsLocation()) {
                 holder.messageRecipient.setVisibility(View.GONE);
             } else {
 

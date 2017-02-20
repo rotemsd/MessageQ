@@ -1,13 +1,22 @@
 package com.saado.rotem.messageq;
 
+import android.*;
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -24,23 +33,33 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class FirebaseBackgroundService extends Service {
+public class FirebaseBackgroundService extends Service implements LocationListener {
 
     private DatabaseReference mChatDatabaseReference = FirebaseDatabase.getInstance()
             .getReference().child("chats");
     private ChildEventListener mPostListener;
     private String mCurrentUserId;
-    private List<SingleMessage> mMessageList;
+    private List<SingleMessage> mTimeMessageList;
+    private List<SingleMessage> mLocationMessageList;
+    private LocationManager mLocationManager;
+    private Location mLocation;
+
+    //private constants for location manager params
+    private static final int MIN_TIME_FOR_UPDATE = 1024;
+    private static final int MIN_DIS_FOR_UPDATE = 1;
+    private static final int DISTANCE = 80;
 
     public FirebaseBackgroundService()
     {
-        mMessageList = new ArrayList<>();
+        mTimeMessageList = new ArrayList<>();
+        mLocationMessageList = new ArrayList<>();
+        mLocation = null;
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
         exec.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                Log.d("rotem", "thread is running  "  + mMessageList.size());
-                for(SingleMessage msg : mMessageList)
+                Log.d("rotem", "mTimeMessageList thread is running  "  + mTimeMessageList.size());
+                for(SingleMessage msg : mTimeMessageList)
                 {
                     if(new Date().getTime() >= msg.getTimeToShow())
                     {
@@ -48,7 +67,26 @@ public class FirebaseBackgroundService extends Service {
                         msg.getDatabaseReference().child("isChildAdded").setValue(false);
                         if(!ChatActivity.isActive(msg.getUniqueChatId()))
                             postNotification(msg, msg.getUniqueChatId());
-                        mMessageList.remove(msg);
+                        mTimeMessageList.remove(msg);
+                    }
+                }
+                Log.d("rotem", "mLocationMessageList thread is running  "  + mLocationMessageList.size());
+                for(SingleMessage msg : mLocationMessageList)
+                {
+                    if (mLocation != null)
+                    {
+                        float[] distance = new float[1];
+                        //get the distance from the target location
+                        Location.distanceBetween(msg.getLatitude(), msg.getLongitude(), mLocation.getLatitude(),
+                                mLocation.getLongitude(), distance);
+                        if(distance[0] < DISTANCE)
+                        {
+                            msg.getDatabaseReference().child("isLocation").setValue(false);
+                            msg.getDatabaseReference().child("isChildAdded").setValue(false);
+                            if(!ChatActivity.isActive(msg.getUniqueChatId()))
+                                postNotification(msg, msg.getUniqueChatId());
+                            mLocationMessageList.remove(msg);
+                        }
                     }
                 }
             }
@@ -60,6 +98,14 @@ public class FirebaseBackgroundService extends Service {
         super.onStartCommand(intent, flags, startId);
         mCurrentUserId = intent.getStringExtra("UID");
         Toast.makeText(this, "start service",Toast.LENGTH_SHORT).show();
+        //assign a request to location
+        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            return START_STICKY;
+        }
+        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                MIN_TIME_FOR_UPDATE, MIN_DIS_FOR_UPDATE, this);
         return START_REDELIVER_INTENT;
     }
 
@@ -115,7 +161,11 @@ public class FirebaseBackgroundService extends Service {
                     message.setUniqueChatId(uniqueChatId);
                     message.getDatabaseReference().child("isNew").setValue(false);
                     if(message.getIsTimed()) {
-                        mMessageList.add(message);
+                        mTimeMessageList.add(message);
+                    }
+                    else if(message.getIsLocation())
+                    {
+                        mLocationMessageList.add(message);
                     }
                     else
                     {
@@ -157,5 +207,38 @@ public class FirebaseBackgroundService extends Service {
                             .setContentText(message.getMessage());
             mNotificationManager.notify(1, mBuilder.build());
         }
+    }
+
+    //called when location was changed
+    @Override
+    public void onLocationChanged(Location location) {
+
+        mLocation = location;
+    }
+
+    @Override
+    public void onStatusChanged(String s, int i, Bundle bundle) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        Toast.makeText(getApplicationContext(), "Gps Disabled", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        Toast.makeText(getApplicationContext(), "Gps Enabled", Toast.LENGTH_SHORT).show();
+    }
+
+    //remove request to location
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        mLocationManager.removeUpdates(this);
     }
 }

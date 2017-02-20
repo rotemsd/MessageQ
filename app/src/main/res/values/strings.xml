@@ -24,6 +24,9 @@
     <string name="logout">Logout</string>
     <string name="add_location_condition">Add location condition</string>
     <string name="add_time_condition">Add time condition</string>
+    <string name="about">about</string>
+    <string name="address">Address</string>
+    <string name="find">Find</string>
 
 
 </resources>

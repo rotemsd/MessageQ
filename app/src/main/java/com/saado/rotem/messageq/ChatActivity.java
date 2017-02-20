@@ -1,8 +1,16 @@
 package com.saado.rotem.messageq;
 
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,8 +21,10 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.TimePicker;
+import android.widget.Toast;
 
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -22,9 +32,11 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 public class ChatActivity extends AppCompatActivity implements ChildEventListener {
 
@@ -45,6 +57,14 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
     private TimePicker mTimePicker;
     private boolean mIsTimeCondition, mIsLocationCondition;
     private LinearLayout mTimeConditionSection;
+    private RelativeLayout mLocationConditionSection;
+    private ProgressDialog mLoadingDialog;
+    private Context mContext;
+    private EditText mEtAddress;
+    private AlertDialog.Builder mBuilder;
+    private double mLatitude, mLongitude;
+    private String mAddressResult;
+    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +76,8 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
 
         mMessageText = (EditText) findViewById(R.id.etMessageText);
         mChatListView = (ListView) findViewById(R.id.chatListView);
+        mEtAddress = (EditText) findViewById(R.id.etAddress);
+        mLocationConditionSection = (RelativeLayout) findViewById(R.id.locationConditionSection);
         mTimeConditionSection = (LinearLayout) findViewById(R.id.timeConditionSection);
         mTimePicker = (TimePicker) findViewById(R.id.timePicker);
 
@@ -73,6 +95,21 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
 
         mChatDatabaseReference = FirebaseDatabase.getInstance().getReference()
                 .child("chats").child(mUniqueChatId);
+
+        //initialize members
+        mAddressResult = null;
+        mBuilder = null;
+        mContext = this;
+        mLatitude = mLongitude = -1;
+
+        //handler for dismiss the loading dialog
+        mHandler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                mLoadingDialog.dismiss();
+                mIsLocationCondition = true;
+            }
+        };
 
     }
 
@@ -120,6 +157,10 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
                 }
                 singleMessage.setTimeCondition(calendar.getTimeInMillis());
             }
+            if(mIsLocationCondition)
+            {
+                singleMessage.setLocationCondition(mLongitude, mLatitude);
+            }
             mChatDatabaseReference.push().setValue(singleMessage);
             mMessageText.setText("");
             mTimeConditionSection.setVisibility(View.GONE);
@@ -131,8 +172,132 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
     public void timeConditionCanceled(View view) {
 
         mTimeConditionSection.setVisibility(View.GONE);
+        mLocationConditionSection.setVisibility(View.GONE);
+        mIsLocationCondition = false;
         mIsTimeCondition = false;
     }
+
+
+
+    public void findCoordinates(View view) {
+
+        //hide keyboard
+        hideSoftKeyboard();
+
+        //show loading dialog
+        mLoadingDialog = ProgressDialog.show(this, "fetching address...", "loading");
+
+        //create new thread for getFromLocationName function
+        new Thread() {
+            @Override
+            public void run() {
+
+                //init Geocoder object
+                Geocoder geocoder = new Geocoder(mContext);
+                //list for address results
+                final List<Address> addresses;
+                //get the input address from user
+                String streetAddress = mEtAddress.getText().toString();
+                //check empty value
+                if (streetAddress.equals("")) {
+                    showToastOnMainUIThread("Address field is empty");
+                } else {
+                    try {
+                        //get addresses results (max results = 5)
+                        addresses = geocoder.getFromLocationName(streetAddress, 5);
+
+                        //if list is empty
+                        if (addresses.size() == 0) {
+
+                            showToastOnMainUIThread("Address field is empty");
+
+                        }
+                        //if there is only one address
+                        else if (addresses.size() == 1) {
+                            mAddressResult = addresses.get(0).getAddressLine(0) +
+                                    (addresses.get(0).getAddressLine(1) == null ? "" : ", " + addresses.get(0).getAddressLine(1)) +
+                                    (addresses.get(0).getAddressLine(2) == null ? "" : ", " + addresses.get(0).getAddressLine(2));
+                            mLongitude = addresses.get(0).getLongitude();
+                            mLatitude = addresses.get(0).getLatitude();
+                            updateUITextViews();
+
+                        }
+                        //if there more than 1 address
+                        else {
+
+                            //create a list of addresses items for the dialog
+                            List<String> addressList = new ArrayList<>();
+                            for (Address ad : addresses) {
+                                String item = ad.getAddressLine(0) +
+                                        (ad.getAddressLine(1) == null ? "" : ", " + ad.getAddressLine(1)) +
+                                        (ad.getAddressLine(2) == null ? "" : ", " + ad.getAddressLine(2));
+                                addressList.add(item);
+                            }
+
+                            //convert the list to string array
+                            String[] items = new String[addressList.size()];
+                            items = addressList.toArray(items);
+
+                            //define the dialog
+                            mBuilder = new AlertDialog.Builder(mContext);
+                            mBuilder.setTitle("Select specific address");
+                            mBuilder.setItems(items, new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int item) {
+
+                                    //pick the user choice
+                                    mAddressResult = addresses.get(item).getAddressLine(0) +
+                                            (addresses.get(item).getAddressLine(1) == null ? "" : ", " + addresses.get(item).getAddressLine(1)) +
+                                            (addresses.get(item).getAddressLine(2) == null ? "" : ", " + addresses.get(item).getAddressLine(2));
+                                    mLongitude = addresses.get(item).getLongitude();
+                                    mLatitude = addresses.get(item).getLatitude();
+                                    updateUITextViews();
+
+                                }
+                            });
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    //show the dialog
+                                    if (mBuilder != null) {
+                                        AlertDialog alert = mBuilder.create();
+                                        alert.show();
+                                    }
+                                }
+                            });
+
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        showToastOnMainUIThread("Can't find street");
+                    }
+                }
+                //send message to handler to dismiss the loading dialog
+                mHandler.sendEmptyMessage(0);
+            }
+        }.start();
+    }
+
+    //function for showing Toast message on the UI thread (called for another thread)
+    public void showToastOnMainUIThread(final String toastMessage) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(mContext, toastMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    //function for updating the text views on the UI thread (called for another thread)
+    public void updateUITextViews() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mEtAddress.setText(mAddressResult);
+            }
+        });
+    }
+
 
     public void hideSoftKeyboard() {
         if (getCurrentFocus() != null) {
@@ -150,18 +315,29 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
     }
 
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.action_attach) {
-            return true;
-        }
-        else if(item.getItemId() == R.id.timeCondition)
+
+        int id = item.getItemId();
+
+        switch (id)
         {
-            Calendar c = Calendar.getInstance();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                mTimePicker.setHour(c.get(Calendar.HOUR));
-                mTimePicker.setMinute(c.get(Calendar.MINUTE) + 1);
-            }
-            mTimeConditionSection.setVisibility(View.VISIBLE);
-            mIsTimeCondition = true;
+            case R.id.locationCondition:
+                mLocationConditionSection.setVisibility(View.VISIBLE);
+                return true;
+
+            case R.id.timeCondition:
+                Calendar c = Calendar.getInstance();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    mTimePicker.setHour(c.get(Calendar.HOUR));
+                    mTimePicker.setMinute(c.get(Calendar.MINUTE) + 1);
+                }
+                mTimeConditionSection.setVisibility(View.VISIBLE);
+                mIsTimeCondition = true;
+                return true;
+
+            //about the programmers :)
+            case R.id.action_about:
+                Toast.makeText(this, "Created By\nRotem Saado & Elya Bar-On", Toast.LENGTH_SHORT).show();
+                return true;
         }
         return super.onOptionsItemSelected(item);
     }
