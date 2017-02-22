@@ -35,49 +35,57 @@ import java.util.concurrent.TimeUnit;
 
 public class FirebaseBackgroundService extends Service implements LocationListener {
 
+    // Private members
+    // Get Firebase reference to for the chat's child
     private DatabaseReference mChatDatabaseReference = FirebaseDatabase.getInstance()
             .getReference().child("chats");
     private ChildEventListener mPostListener;
     private String mCurrentUserId;
-    private List<SingleMessage> mTimeMessageList;
-    private List<SingleMessage> mLocationMessageList;
     private LocationManager mLocationManager;
     private Location mLocation;
+    // Lists of the conditioned messages
+    private List<SingleMessage> mTimeMessageList;
+    private List<SingleMessage> mLocationMessageList;
 
     //private constants for location manager params
     private static final int MIN_TIME_FOR_UPDATE = 1024;
     private static final int MIN_DIS_FOR_UPDATE = 1;
     private static final int DISTANCE = 80;
 
+    // Constructor
     public FirebaseBackgroundService()
     {
+        // Initialize the lists
         mTimeMessageList = new ArrayList<>();
         mLocationMessageList = new ArrayList<>();
         mLocation = null;
+        // Will run a thread that will check the list every 10 seconds
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
         exec.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                Log.d("rotem", "mTimeMessageList thread is running  "  + mTimeMessageList.size());
+//                Log.d("rotem", "mTimeMessageList thread is running  "  + mTimeMessageList.size());
                 SingleMessage message = null;
                 for(SingleMessage msg : mTimeMessageList)
                 {
-                    Log.d("rotem", "" + msg.getMessage());
-                    Log.d("rotem", "My time: "  + new Date().getTime());
-                    Log.d("rotem", "Message time: "  + msg.getTimeToShow());
+//                    Log.d("rotem", "" + msg.getMessage());
+//                    Log.d("rotem", "My time: "  + new Date().getTime());
+//                    Log.d("rotem", "Message time: "  + msg.getTimeToShow());
+
+                    // Check if it's the time to show the message.
                     if(new Date().getTime() >= msg.getTimeToShow())
                     {
                         message = msg;
                         msg.getDatabaseReference().child("isTimed").setValue(false);
                         msg.getDatabaseReference().child("isChildAdded").setValue(false);
+                        // Check if we need to show notification
                         if(!ChatActivity.isActive(msg.getUniqueChatId()))
                             postNotification(msg, msg.getUniqueChatId());
                         break;
-
                     }
                 }
                 mTimeMessageList.remove(message);
-                Log.d("rotem", "mLocationMessageList thread is running  "  + mLocationMessageList.size());
+//                Log.d("rotem", "mLocationMessageList thread is running  "  + mLocationMessageList.size());
                 for(SingleMessage msg : mLocationMessageList)
                 {
                     if (mLocation != null)
@@ -86,11 +94,13 @@ public class FirebaseBackgroundService extends Service implements LocationListen
                         //get the distance from the target location
                         Location.distanceBetween(msg.getLatitude(), msg.getLongitude(), mLocation.getLatitude(),
                                 mLocation.getLongitude(), distance);
+                        // Check if we are in the location's radius to show the message.
                         if(distance[0] < DISTANCE)
                         {
                             message = msg;
                             msg.getDatabaseReference().child("isLocation").setValue(false);
                             msg.getDatabaseReference().child("isChildAdded").setValue(false);
+                            // Check if we need to show notification
                             if(!ChatActivity.isActive(msg.getUniqueChatId()))
                                 postNotification(msg, msg.getUniqueChatId());
                         }
@@ -103,6 +113,7 @@ public class FirebaseBackgroundService extends Service implements LocationListen
     }
 
     @Override
+    // Initialize the location manager
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         mCurrentUserId = intent.getStringExtra("UID");
@@ -126,7 +137,7 @@ public class FirebaseBackgroundService extends Service implements LocationListen
     @Override
     public void onCreate() {
         super.onCreate();
-
+        // Add a listener to FireBase
         mPostListener = new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
@@ -157,30 +168,29 @@ public class FirebaseBackgroundService extends Service implements LocationListen
         };
         mChatDatabaseReference.addChildEventListener(mPostListener);
     }
-
+    // Get the messages from Firebase
     private void getRelevantMessages(DataSnapshot dataSnapshot)
     {
         if(dataSnapshot.exists()){
 
             for(DataSnapshot data : dataSnapshot.getChildren()) {
+                // Get the message values to a new SingleMessage object
                 SingleMessage message = data.getValue(SingleMessage.class);
-                Log.d("rotem", "current user id: " + message.getRecipient().equals(mCurrentUserId));
-                Log.d("rotem", "message.getIsNew(): " + message.getIsNew());
-                Log.d("rotem", "message.getIsChildAdded(): " + message.getIsChildAdded());
                 if (message.getRecipient().equals(mCurrentUserId) && message.getIsNew() && !message.getIsChildAdded()) {
                     String uniqueChatId = dataSnapshot.getKey();
                     message.setDatabaseReference(mChatDatabaseReference.child(uniqueChatId).child(data.getKey()));
                     message.setUniqueChatId(uniqueChatId);
-                    Log.d("rotem", "before setting isNew to false");
                     message.getDatabaseReference().child("isNew").setValue(false);
-                    Log.d("rotem", "after setting isNew to false");
+                    // If the time condition is true, add to time message list
                     if(message.getIsTimed()) {
                         mTimeMessageList.add(message);
                     }
+                    // If the location condition is true, add to location message list
                     else if(message.getIsLocation())
                     {
                         mLocationMessageList.add(message);
                     }
+                    // Otherwise it's a regular message, show or notify.
                     else
                     {
                         if(!ChatActivity.isActive(uniqueChatId))
@@ -191,11 +201,11 @@ public class FirebaseBackgroundService extends Service implements LocationListen
         }
     }
 
-
+    // this function will Send notification
     private void postNotification(SingleMessage message, String uniqueChatId) {
         User sender = UsersAdapter.getUserByUid(message.getSender());
         if(sender != null ) {
-
+            // Create the intent when you click the notification/
             Intent resultIntent = new Intent(this, ChatActivity.class);
             resultIntent.putExtra(ChatActivity.RECIPIENT_DISPLAY_NAME, sender.getDisplayName());
             resultIntent.putExtra(ChatActivity.CURRENT_USER_ID, mCurrentUserId);
@@ -208,9 +218,9 @@ public class FirebaseBackgroundService extends Service implements LocationListen
                             resultIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT
                     );
+            // Get the notification manager.
             NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             //create Notification bar
-            Log.d("rotem", "build notification");
             NotificationCompat.Builder mBuilder =
                     new NotificationCompat.Builder(this)
                             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

@@ -25,9 +25,10 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.List;
-
+// This class represent the chat's UI
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
+    // Private class members
     private static String TAG = MainActivity.class.getSimpleName();
     private static final String SERVICE_NAME = "com.saado.rotem.messageq.FirebaseBackgroundService";
     private ListView mUserListView;
@@ -42,24 +43,27 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
 
     @Override
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        // Get view reference
         mUserListView = (ListView) findViewById(R.id.usersListView);
         mUsersAdapter = new UsersAdapter(this, new ArrayList<User>());
+        // Initialize the UserAdapter and set the list view for this adapter
         mUserListView.setAdapter(mUsersAdapter);
         mUserListView.setOnItemClickListener(this);
 
-        mAuth = FirebaseAuth.getInstance();
-        mUsersDatabaseReference = FirebaseDatabase.getInstance().getReference().child("users");
 
+        mAuth = FirebaseAuth.getInstance();
+        // Get Firebase reference to for the users unique id
+        mUsersDatabaseReference = FirebaseDatabase.getInstance().getReference().child("users");
         mUsersKeyList = new ArrayList<String>();
 
         Transition mFadeTransition = new Fade();
     }
 
-
+    // Check if the user if authenticated
     private void setAuthListener() {
         mAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
@@ -67,14 +71,12 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
                     // User is signed in
-                    Log.d(TAG, "onAuthStateChanged:signed_in:" + user.getUid());
                     mCurrentUserId = user.getUid();
                     mChildEventListener = getChildEventListener();
                     mUsersDatabaseReference.limitToFirst(50).addChildEventListener(mChildEventListener);
                     startBackgroundService();
                 } else {
                     // User is signed out
-                    Log.d(TAG, "onAuthStateChanged:signed_out");
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                     // LoginActivity is a New Task
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -85,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             }
         };
     }
-
+    // Starts the service in the background
     private void startBackgroundService() {
 
         if(!isServiceRunning()) {
@@ -106,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         return false;
     }
 
+    // Stops the service in the background
     private void stopBackgroundService() {
         Intent serviceIntent = new Intent(MainActivity.this, FirebaseBackgroundService.class);
         stopService(serviceIntent);
@@ -117,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
-
+    // When selecting items on MainActivity menu
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_logout) {
             mAuth.signOut();
@@ -129,6 +132,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
 
     @Override
+    // Set a listener
     public void onStart() {
         super.onStart();
         setAuthListener();
@@ -136,10 +140,15 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        mUsersAdapter.clearList();
+    }
+
+    @Override
+    // Stop the listener
     public void onStop() {
         super.onStop();
-
-        mUsersAdapter.clearList();
         mUsersKeyList.clear();
 
         if (mAuthListener != null) {
@@ -149,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             mUsersDatabaseReference.removeEventListener(mChildEventListener);
         }
     }
-
+    // Add Listener on the user in the Firebase DB
     private ChildEventListener getChildEventListener() {
         return new ChildEventListener() {
             @Override
@@ -158,7 +167,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 if (dataSnapshot.exists()) {
 
                     String userUid = dataSnapshot.getKey();
-
+                    // If i'ts not me show the user
                     if (dataSnapshot.getKey().equals(mCurrentUserId)) {
                         mCurrentUser = dataSnapshot.getValue(User.class);
                         mUsersAdapter.setCurrentUserInfo(userUid, mCurrentUser.getEmail(), mCurrentUser.getCreatedAt());
@@ -211,11 +220,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
 
     @Override
+    // When clicked on the user, open a chat with the user
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 
         User recipientUser = mUsersAdapter.getUser(i);
         String uniqueChatId = mCurrentUser.createUniqueChatId(recipientUser.getEmail(), recipientUser.getCreatedAt());
-        Log.d(TAG, uniqueChatId);
 
         Intent intent = new Intent(this, ChatActivity.class);
         intent.putExtra(ChatActivity.RECIPIENT_DISPLAY_NAME, recipientUser.getDisplayName());

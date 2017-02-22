@@ -38,22 +38,25 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+// This class represent the chat's UI
 public class ChatActivity extends AppCompatActivity implements ChildEventListener {
 
+    // Constants and static members for intent
     public static final String RECIPIENT_DISPLAY_NAME = "display_name";
     public static final String CURRENT_USER_ID = "current_user_id";
     public static final String RECIPIENT_ID = "recipient_id";
     public static final String UNIQUE_CHAT_ID = "unique_chat_id";
     private static final String TAG = ChatActivity.class.getSimpleName();
 
+    // Private class members
     private static String mUniqueChatId;
     private static boolean mIsActive;
     private String mRecipientDisplayName, mRecipientId, mCurrentUserId;
     private DatabaseReference mChatDatabaseReference;
-    private static ListView mChatListView;
+    private ListView mChatListView;
     private EditText mMessageText;
     private ChildEventListener mChatListener;
-    private static ChatAdapter mChatAdapter;
+    private ChatAdapter mChatAdapter;
     private TimePicker mTimePicker;
     private boolean mIsTimeCondition, mIsLocationCondition;
     private LinearLayout mTimeConditionSection;
@@ -71,9 +74,11 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
+        // Add back button in action bar
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+        // Get view reference
         mMessageText = (EditText) findViewById(R.id.etMessageText);
         mChatListView = (ListView) findViewById(R.id.chatListView);
         mEtAddress = (EditText) findViewById(R.id.etAddress);
@@ -81,18 +86,24 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
         mTimeConditionSection = (LinearLayout) findViewById(R.id.timeConditionSection);
         mTimePicker = (TimePicker) findViewById(R.id.timePicker);
 
+        // Set 24 hours time
         mTimePicker.setIs24HourView(true);
 
+        // Initialize the chat adapter and set the list view for this adapter
         mChatAdapter = new ChatAdapter(this, new ArrayList<SingleMessage>());
         mChatListView.setAdapter(mChatAdapter);
+        // Remove Message lined devider
         mChatListView.setDivider(null);
 
         getValuesFromIntent();
+        //set the name of the user we are chatting with
         setTitle(mRecipientDisplayName);
 
+        // Default message conditions is without time or location
         mIsTimeCondition = false;
         mIsLocationCondition = false;
 
+        // Get Firebase reference to for the chat's unique id
         mChatDatabaseReference = FirebaseDatabase.getInstance().getReference()
                 .child("chats").child(mUniqueChatId);
 
@@ -113,8 +124,8 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
 
     }
 
+    // Initialize members from Intent that we get from the MainActivity
     private void getValuesFromIntent() {
-
         Intent intent = getIntent();
         mRecipientDisplayName = intent.getStringExtra(RECIPIENT_DISPLAY_NAME);
         mRecipientId = intent.getStringExtra(RECIPIENT_ID);
@@ -122,6 +133,8 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
         mUniqueChatId = intent.getStringExtra(UNIQUE_CHAT_ID);
     }
 
+    @Override
+    //Override onStart to add listener to Firebase
     protected void onStart() {
         super.onStart();
         hideSoftKeyboard();
@@ -130,6 +143,7 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
     }
 
     @Override
+    // Remove the firebase listener and clear the list
     protected void onStop() {
         super.onStop();
         mIsActive = false;
@@ -140,14 +154,16 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
 
     }
 
-
+    // Implement the "Send" message button
     public void sendMessage(View view) {
-
+        // Get the String from the EditText
         String message = mMessageText.getText().toString();
-
+        // Check if message isn't empty
         if (!message.isEmpty()) {
-
+            // Create new message object
             SingleMessage singleMessage = new SingleMessage(message, mCurrentUserId, mRecipientId, new Date().getTime(), true);
+
+            // If we have a time conditioned message-> add the conditions to the SingleMessage object.
             if(mIsTimeCondition)
             {
                 Calendar calendar = Calendar.getInstance();
@@ -156,20 +172,24 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
 
                 singleMessage.setTimeCondition(calendar.getTimeInMillis());
             }
+            // If we have a location conditioned message-> add the conditions to the SingleMessage object.
             if(mIsLocationCondition)
             {
                 singleMessage.setLocationCondition(mLongitude, mLatitude);
             }
+
+            // Push the message to the DB
             mChatDatabaseReference.push().setValue(singleMessage);
             mMessageText.setText("");
             mTimeConditionSection.setVisibility(View.GONE);
             mLocationConditionSection.setVisibility(View.GONE);
             mIsTimeCondition = false;
+            mIsLocationCondition = false;
             hideSoftKeyboard();
         }
     }
 
-
+    // If i cancel the time conditons
     public void timeConditionCanceled(View view) {
 
         mTimeConditionSection.setVisibility(View.GONE);
@@ -179,7 +199,7 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
     }
 
 
-
+    // Implement the "find" message button
     public void findCoordinates(View view) {
 
         //hide keyboard
@@ -299,7 +319,7 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
         });
     }
 
-
+    // Hide the keyboard
     public void hideSoftKeyboard() {
         if (getCurrentFocus() != null) {
             InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
@@ -307,14 +327,15 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
         }
     }
 
-
     @Override
+    // Create the chat menu
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_chat, menu);
         return true;
     }
 
+    // When selecting items on chat menu
     public boolean onOptionsItemSelected(MenuItem item) {
 
         int id = item.getItemId();
@@ -326,11 +347,6 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
                 return true;
 
             case R.id.timeCondition:
-//                Calendar c = Calendar.getInstance();
-////                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-////                    mTimePicker.setHour(c.get(Calendar.HOUR));
-////                    mTimePicker.setMinute(c.get(Calendar.MINUTE) + 1);
-////                }
                 mTimeConditionSection.setVisibility(View.VISIBLE);
                 mIsTimeCondition = true;
                 return true;
@@ -343,48 +359,48 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
         return super.onOptionsItemSelected(item);
     }
 
-    public static void addMessage(SingleMessage msg)
-    {
-        mChatAdapter.addMessage(msg);
-        mChatListView.setSelection(mChatAdapter.getCount() - 1);
-    }
-
 
 
     @Override
+    // Firebase function listener when a new message is created
     public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-
         if (dataSnapshot.exists()) {
-            Log.d("rotem", "onChildAdded");
+            // Get the message values to a new SingleMessage object
             SingleMessage newMessage = dataSnapshot.getValue(SingleMessage.class);
             mChatDatabaseReference.child(dataSnapshot.getKey()).child("isChildAdded").setValue(true);
+            // Define the message to a sender or recipient
             if (newMessage.getSender().equals(mCurrentUserId)) {
                 newMessage.setRecipientOrSender(ChatAdapter.SENDER);
             } else {
                 newMessage.setRecipientOrSender(ChatAdapter.RECIPIENT);
             }
+            // Add the message to the adapter
             mChatAdapter.addMessage(newMessage);
+            // Show the last message in the list
             mChatListView.setSelection(mChatAdapter.getCount() - 1);
         }
 
     }
 
     @Override
+    // Firebase function listener when a  message is changed
     public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-        Log.d("rotem", "onChildChanged");
-
         if (dataSnapshot.exists()) {
+            // Get the message values to a new SingleMessage object
             SingleMessage newMessage = dataSnapshot.getValue(SingleMessage.class);
+            // Check if the child is already added
             if(!newMessage.getIsChildAdded() ) {
+                // Define the message to a sender or recipient
                 if (newMessage.getSender().equals(mCurrentUserId)) {
                     newMessage.setRecipientOrSender(ChatAdapter.SENDER);
                     int index = mChatAdapter.getMessageIndex(newMessage);
-                    Log.d("rotem", "index: " + index);
                     View view = mChatListView.getChildAt(index - mChatListView.getFirstVisiblePosition());
                     if(view == null)
                         return;
+                    // Change the color of message to black
                     TextView textMessage = (TextView) view.findViewById(R.id.tvMessageSender);
                     textMessage.setTextColor(Color.BLACK);
+                    // Show the last message in the list
                     mChatListView.setSelection(mChatAdapter.getCount() - 1);
                 }
 
@@ -407,7 +423,7 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
     public void onCancelled(DatabaseError databaseError) {
 
     }
-
+    // Show if the activity in active or not for notifications indication
     public static boolean isActive(String uniqueChatId) {
         if (mIsActive && mUniqueChatId.equals(uniqueChatId))
             return true;

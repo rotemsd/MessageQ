@@ -13,22 +13,23 @@ public class SingleMessage {
     private boolean isNew;
     private boolean mIsSender;
 
-    // members for showing on specific time
+    // Class members for showing a message at specific time
     private boolean isTimed;
     private long timeToShow;
 
-    // members for showing on specific place
+    // Class members for showing a message on specific place
     private boolean isLocation;
     private double latitude, longitude;
 
-    //Firebase ref
+    // Firebase references
     private DatabaseReference dbRef;
     private String uniqueChatId;
     private boolean isChildAdded;
 
+    // Default empty constructor
     public SingleMessage() {}
 
-    // constructor
+    // Constructor
     public SingleMessage(String message, String sender, String recipient, long createdAt, boolean isNew) {
         this.message = message;
         this.recipient = recipient;
@@ -41,13 +42,13 @@ public class SingleMessage {
         this.isLocation = false;
         this.latitude = this.longitude = -1;
     }
-
+    // Setting a message at specific time
     public void setTimeCondition(long timeCondition)
     {
         this.isTimed = true;
         this.timeToShow = timeCondition;
     }
-
+    // Setting a message at specific location
     public void setLocationCondition(double longitude, double latitude)
     {
         this.isLocation = true;
@@ -55,7 +56,7 @@ public class SingleMessage {
         this.latitude = latitude;
     }
 
-    // getters
+    // Getters and Setters
     public String getMessage() {
         return message;
     }
@@ -107,7 +108,7 @@ public class SingleMessage {
     }
 
 
-    // not including in FireBase database
+    // Not including in FireBase database
     @Exclude
     public void setRecipientOrSender(boolean isSender) {
         mIsSender = isSender;
@@ -142,6 +143,7 @@ public class SingleMessage {
 
     @Exclude
     @Override
+    // Compare objects by the createdAt field
     public boolean equals(Object obj) {
         if (obj == null) return false;
         if (obj == this) return true;

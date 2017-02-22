@@ -16,7 +16,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/sender_background"
         android:padding="8dp"
-        android:text="test"
+        android:text="@string/test"
         android:textColor="@color/black"
         android:textSize="14sp"
         android:textStyle="bold" />
@@ -33,7 +33,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/recipient_background"
         android:padding="8dp"
-        android:text="test"
+        android:text="@string/test"
         android:textColor="@color/black"
         android:textSize="14sp"
         android:textStyle="bold" />

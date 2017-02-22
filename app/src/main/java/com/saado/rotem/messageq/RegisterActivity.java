@@ -19,6 +19,7 @@ import java.util.Date;
 
 public class RegisterActivity extends AppCompatActivity {
 
+    // Private members
     private static final String TAG = RegisterActivity.class.getSimpleName();
     private EditText mDisplayName, mRegisterUserEmail, mRegisterPassword;
     private FirebaseAuth mAuth;
@@ -30,6 +31,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
+        // Get view reference
         mDisplayName = (EditText) findViewById(R.id.registerDisplayName);
         mRegisterUserEmail = (EditText) findViewById(R.id.registerUserEmail);
         mRegisterPassword = (EditText) findViewById(R.id.registerPassword);
@@ -38,13 +40,15 @@ public class RegisterActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mDatabaseReference = FirebaseDatabase.getInstance().getReference();
     }
-
+    // When the user clicks on the register button
     public void register(View view) {
 
+        // Get the fields value
         String displayName = mDisplayName.getText().toString();
         String userEmail = mRegisterUserEmail.getText().toString();
         String userPassword = mRegisterPassword.getText().toString();
 
+        // Check if the fields are empty
         if(displayName.equals("") || userEmail.equals("") || userPassword.equals("")){
 
             mDialog = AppHelper.buildAlertDialog(getString(R.string.register_error_title),
@@ -52,6 +56,7 @@ public class RegisterActivity extends AppCompatActivity {
             mDialog.show();
 
         }
+        // if the firebase accepts the values
         else if(isIncorrectValues(userEmail, userPassword)) {
 
             mDialog = AppHelper.buildAlertDialog(getString(R.string.register_error_title),
@@ -63,18 +68,19 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
     }
-
+    // Validation on the input
     private boolean isIncorrectValues(String userEmail, String userPassword) {
 
         return userPassword.length() < 6 || !android.util.Patterns.EMAIL_ADDRESS.matcher(userEmail).matches();
     }
-
+    // Executes the SignUp
     private void executeSignUp(String userEmail, String userPassword) {
 
         mDialog = AppHelper.buildAlertDialog(getString(R.string.register_title),
                 getString(R.string.register_message), false, this);
         mDialog.show();
 
+        // Set the values to firebase
         mAuth.createUserWithEmailAndPassword(userEmail, userPassword).addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
@@ -82,7 +88,7 @@ public class RegisterActivity extends AppCompatActivity {
                 mDialog.dismiss();
 
                 if(task.isSuccessful()){
-
+                    // If task success add a user to firebase db and start the MainActivity
                     addNewUser(task.getResult().getUser().getUid());
 
                     Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
@@ -91,6 +97,7 @@ public class RegisterActivity extends AppCompatActivity {
                     startActivity(intent);
 
                 }else {
+                    // If the task not succeeded show an error
                     mDialog = AppHelper.buildAlertDialog(getString(R.string.register_title),
                             task.getException().getMessage(), true, RegisterActivity.this);
                     mDialog.show();
@@ -98,7 +105,7 @@ public class RegisterActivity extends AppCompatActivity {
             }
         });
     }
-
+    // Add a new user to Firebase DB
     private void addNewUser(String userId) {
 
         String displayName = mDisplayName.getText().toString();
@@ -107,7 +114,7 @@ public class RegisterActivity extends AppCompatActivity {
         mDatabaseReference.child("users").child(userId).setValue(user);
     }
 
-
+    // When the user clicks on the cancel button
     public void cancel(View view) {
         finish();
     }
