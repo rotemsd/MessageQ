@@ -59,17 +59,24 @@ public class FirebaseBackgroundService extends Service implements LocationListen
             @Override
             public void run() {
                 Log.d("rotem", "mTimeMessageList thread is running  "  + mTimeMessageList.size());
+                SingleMessage message = null;
                 for(SingleMessage msg : mTimeMessageList)
                 {
+                    Log.d("rotem", "" + msg.getMessage());
+                    Log.d("rotem", "My time: "  + new Date().getTime());
+                    Log.d("rotem", "Message time: "  + msg.getTimeToShow());
                     if(new Date().getTime() >= msg.getTimeToShow())
                     {
+                        message = msg;
                         msg.getDatabaseReference().child("isTimed").setValue(false);
                         msg.getDatabaseReference().child("isChildAdded").setValue(false);
                         if(!ChatActivity.isActive(msg.getUniqueChatId()))
                             postNotification(msg, msg.getUniqueChatId());
-                        mTimeMessageList.remove(msg);
+                        break;
+
                     }
                 }
+                mTimeMessageList.remove(message);
                 Log.d("rotem", "mLocationMessageList thread is running  "  + mLocationMessageList.size());
                 for(SingleMessage msg : mLocationMessageList)
                 {
@@ -81,14 +88,16 @@ public class FirebaseBackgroundService extends Service implements LocationListen
                                 mLocation.getLongitude(), distance);
                         if(distance[0] < DISTANCE)
                         {
+                            message = msg;
                             msg.getDatabaseReference().child("isLocation").setValue(false);
                             msg.getDatabaseReference().child("isChildAdded").setValue(false);
                             if(!ChatActivity.isActive(msg.getUniqueChatId()))
                                 postNotification(msg, msg.getUniqueChatId());
-                            mLocationMessageList.remove(msg);
                         }
                     }
                 }
+                mLocationMessageList.remove(message);
+
             }
         }, 0, 10, TimeUnit.SECONDS);
     }
@@ -155,11 +164,16 @@ public class FirebaseBackgroundService extends Service implements LocationListen
 
             for(DataSnapshot data : dataSnapshot.getChildren()) {
                 SingleMessage message = data.getValue(SingleMessage.class);
-                if (message.getRecipient().equals(mCurrentUserId) && message.getIsNew()) {
+                Log.d("rotem", "current user id: " + message.getRecipient().equals(mCurrentUserId));
+                Log.d("rotem", "message.getIsNew(): " + message.getIsNew());
+                Log.d("rotem", "message.getIsChildAdded(): " + message.getIsChildAdded());
+                if (message.getRecipient().equals(mCurrentUserId) && message.getIsNew() && !message.getIsChildAdded()) {
                     String uniqueChatId = dataSnapshot.getKey();
                     message.setDatabaseReference(mChatDatabaseReference.child(uniqueChatId).child(data.getKey()));
                     message.setUniqueChatId(uniqueChatId);
+                    Log.d("rotem", "before setting isNew to false");
                     message.getDatabaseReference().child("isNew").setValue(false);
+                    Log.d("rotem", "after setting isNew to false");
                     if(message.getIsTimed()) {
                         mTimeMessageList.add(message);
                     }
@@ -196,6 +210,7 @@ public class FirebaseBackgroundService extends Service implements LocationListen
                     );
             NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             //create Notification bar
+            Log.d("rotem", "build notification");
             NotificationCompat.Builder mBuilder =
                     new NotificationCompat.Builder(this)
                             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

@@ -50,10 +50,10 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
     private static boolean mIsActive;
     private String mRecipientDisplayName, mRecipientId, mCurrentUserId;
     private DatabaseReference mChatDatabaseReference;
-    private ListView mChatListView;
+    private static ListView mChatListView;
     private EditText mMessageText;
     private ChildEventListener mChatListener;
-    private ChatAdapter mChatAdapter;
+    private static ChatAdapter mChatAdapter;
     private TimePicker mTimePicker;
     private boolean mIsTimeCondition, mIsLocationCondition;
     private LinearLayout mTimeConditionSection;
@@ -151,10 +151,9 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
             if(mIsTimeCondition)
             {
                 Calendar calendar = Calendar.getInstance();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    calendar.set(Calendar.HOUR_OF_DAY, mTimePicker.getHour());
-                    calendar.set(Calendar.MINUTE, mTimePicker.getMinute());
-                }
+                calendar.set(Calendar.HOUR_OF_DAY, mTimePicker.getCurrentHour());
+                calendar.set(Calendar.MINUTE, mTimePicker.getCurrentMinute());
+
                 singleMessage.setTimeCondition(calendar.getTimeInMillis());
             }
             if(mIsLocationCondition)
@@ -164,7 +163,9 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
             mChatDatabaseReference.push().setValue(singleMessage);
             mMessageText.setText("");
             mTimeConditionSection.setVisibility(View.GONE);
+            mLocationConditionSection.setVisibility(View.GONE);
             mIsTimeCondition = false;
+            hideSoftKeyboard();
         }
     }
 
@@ -325,11 +326,11 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
                 return true;
 
             case R.id.timeCondition:
-                Calendar c = Calendar.getInstance();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    mTimePicker.setHour(c.get(Calendar.HOUR));
-                    mTimePicker.setMinute(c.get(Calendar.MINUTE) + 1);
-                }
+//                Calendar c = Calendar.getInstance();
+////                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+////                    mTimePicker.setHour(c.get(Calendar.HOUR));
+////                    mTimePicker.setMinute(c.get(Calendar.MINUTE) + 1);
+////                }
                 mTimeConditionSection.setVisibility(View.VISIBLE);
                 mIsTimeCondition = true;
                 return true;
@@ -340,6 +341,12 @@ public class ChatActivity extends AppCompatActivity implements ChildEventListene
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public static void addMessage(SingleMessage msg)
+    {
+        mChatAdapter.addMessage(msg);
+        mChatListView.setSelection(mChatAdapter.getCount() - 1);
     }
 
 
